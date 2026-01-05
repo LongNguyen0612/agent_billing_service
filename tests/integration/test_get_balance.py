@@ -66,6 +66,7 @@ class TestGetBalanceIntegration:
         # Create transactions
         transaction1 = CreditTransaction(
             tenant_id=tenant_id,
+            ledger_id=ledger.id,
             transaction_type="consume",
             amount=Decimal("50.00"),
             balance_before=initial_balance,

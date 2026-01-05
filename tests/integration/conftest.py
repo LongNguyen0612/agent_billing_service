@@ -19,21 +19,29 @@ def test_data():
 async def engine():
     """Create test database engine using PostgreSQL test database"""
     # Use a test database on the same PostgreSQL instance
-    test_db_url = "postgresql+asyncpg://postgres:postgres@localhost:5433/billing_test"
+    # Uses local postgres on localhost:5432
+    import os
+    test_db_url = os.environ.get(
+        "TEST_DATABASE_URL",
+        "postgresql+asyncpg://frednguyen@localhost:5432/billing_service_test"
+    )
 
     engine = create_async_engine(test_db_url, echo=False, future=True)
 
-    # Drop and recreate the public schema to ensure clean state
+    # Drop all tables using CASCADE to handle dependencies and indexes
     async with engine.begin() as conn:
-        # Drop all tables by dropping and recreating the public schema
+        # Use raw SQL to drop schema objects more reliably
+        # asyncpg doesn't support multiple statements, so execute separately
         await conn.execute(sqlalchemy.text("DROP SCHEMA IF EXISTS public CASCADE"))
         await conn.execute(sqlalchemy.text("CREATE SCHEMA public"))
-        # Create all tables
+
+    # Then create all tables fresh
+    async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
     yield engine
 
-    # Cleanup after test
+    # Cleanup after test - drop all tables
     async with engine.begin() as conn:
         await conn.execute(sqlalchemy.text("DROP SCHEMA IF EXISTS public CASCADE"))
         await conn.execute(sqlalchemy.text("CREATE SCHEMA public"))
@@ -50,16 +58,20 @@ async def db_session(engine):
 
 
 @pytest_asyncio.fixture
-async def client(db_session):
+async def client(engine):
     """Create test client with database session override"""
     from src.api.app import create_app
     from config import ApplicationConfig
 
     app = create_app(ApplicationConfig)
 
-    # Override the session dependency to use test session
+    # Create a sessionmaker for the test
+    Session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
+
+    # Override the session dependency to create a new session per request
     async def override_get_session():
-        yield db_session
+        async with Session() as session:
+            yield session
 
     app.dependency_overrides[get_session] = override_get_session
 

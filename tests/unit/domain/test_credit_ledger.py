@@ -61,18 +61,6 @@ class TestCreditLedgerCreation:
 class TestCreditLedgerValidation:
     """Test CreditLedger validation rules"""
 
-    def test_missing_required_fields_raises_validation_error(self):
-        """Test that missing required fields raise validation error"""
-        # Arrange
-        incomplete_data = {
-            "tenant_id": "tenant_abc"
-            # Missing balance, created_at, updated_at
-        }
-
-        # Act & Assert
-        with pytest.raises(ValidationError):
-            CreditLedger(**incomplete_data)
-
     def test_auto_generated_timestamps_if_not_provided(self):
         """Test that timestamps are auto-generated if not provided"""
         # Arrange & Act

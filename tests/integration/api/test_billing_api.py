@@ -134,10 +134,13 @@ class TestBillingAPIIntegration:
             updated_at=datetime.now(),
         )
         db_session.add(ledger)
+        await db_session.commit()
+        await db_session.refresh(ledger)
 
         # Create original transaction
         original_tx = CreditTransaction(
             tenant_id=tenant_id,
+            ledger_id=ledger.id,
             transaction_type="consume",
             amount=Decimal("50.00"),
             balance_before=Decimal("1000.00"),

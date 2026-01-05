@@ -12,12 +12,17 @@ from src.app.use_cases.billing.dtos import (
     BalanceResponseDTO,
     ConsumeCommandDTO,
     RefundCommandDTO,
+    EstimateCommandDTO,
+    EstimateResponseDTO,
+    ListTransactionsResponseDTO,
 )
 from src.app.use_cases.billing.consume_credit import ConsumeCredit
 from src.app.use_cases.billing.refund_credit import RefundCredit
 from src.app.use_cases.billing.get_balance import GetBalance
-from src.adapter.repositories.credit_ledger_repository import CreditLedgerRepository
-from src.adapter.repositories.credit_transaction_repository import CreditTransactionRepository
+from src.app.use_cases.billing.estimate_credit import EstimateCredit
+from src.app.use_cases.billing.list_transactions import ListTransactions
+from src.adapter.repositories.credit_ledger_repository import SqlAlchemyCreditLedgerRepository
+from src.adapter.repositories.credit_transaction_repository import SqlAlchemyCreditTransactionRepository
 from src.adapter.services.unit_of_work import SqlAlchemyUnitOfWork
 from src.depends import get_session
 from src.api.error import ClientError
@@ -96,8 +101,8 @@ async def consume_credits(
     """
     # Create UnitOfWork and repositories
     uow = SqlAlchemyUnitOfWork(session)
-    ledger_repo = CreditLedgerRepository(session)
-    transaction_repo = CreditTransactionRepository(session)
+    ledger_repo = SqlAlchemyCreditLedgerRepository(session)
+    transaction_repo = SqlAlchemyCreditTransactionRepository(session)
 
     # Convert request schema to command DTO
     command = ConsumeCommandDTO(
@@ -184,8 +189,8 @@ async def refund_credits(
     """
     # Create UnitOfWork and repositories
     uow = SqlAlchemyUnitOfWork(session)
-    ledger_repo = CreditLedgerRepository(session)
-    transaction_repo = CreditTransactionRepository(session)
+    ledger_repo = SqlAlchemyCreditLedgerRepository(session)
+    transaction_repo = SqlAlchemyCreditTransactionRepository(session)
 
     # Convert request schema to command DTO
     command = RefundCommandDTO(
@@ -256,7 +261,7 @@ async def get_balance(
     - 404: Tenant ledger not found
     """
     # Create repository
-    ledger_repo = CreditLedgerRepository(session)
+    ledger_repo = SqlAlchemyCreditLedgerRepository(session)
 
     # Execute use case
     use_case = GetBalance(ledger_repo)
@@ -269,4 +274,90 @@ async def get_balance(
         raise ClientError(result.error)
 
     # Return successful response
+    return result.value
+
+
+@router.post(
+    "/estimate",
+    response_model=EstimateResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def estimate_credits(request: EstimateCommandDTO):
+    """
+    Estimate credit cost for pipeline execution (UC-33).
+
+    This endpoint calculates the estimated credit cost without
+    mutating any balances. Use this for preflight checks.
+
+    **Request body:**
+    - `task_id` (optional): Task identifier for context
+    - `pipeline_steps` (required): List of pipeline step types
+
+    **Example request:**
+    ```json
+    {
+      "task_id": "task_123",
+      "pipeline_steps": ["ANALYSIS", "USER_STORIES", "CODE", "TEST"]
+    }
+    ```
+
+    **Returns:**
+    - 200: Estimation successful with breakdown
+    """
+    use_case = EstimateCredit()
+    result = await use_case.execute(request)
+
+    # EstimateCredit always succeeds
+    return result.value
+
+
+@router.get(
+    "/transactions",
+    response_model=ListTransactionsResponseDTO,
+    status_code=status.HTTP_200_OK,
+)
+async def list_transactions(
+    tenant_id: str,
+    limit: int = 20,
+    offset: int = 0,
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get credit transaction history for a tenant (UC-36).
+
+    This endpoint retrieves paginated transaction history ordered by
+    most recent first.
+
+    **Query parameters:**
+    - `tenant_id` (required): Tenant identifier
+    - `limit` (optional): Max transactions to return (default 20)
+    - `offset` (optional): Number of transactions to skip (default 0)
+
+    **Example response:**
+    ```json
+    {
+      "transactions": [
+        {
+          "id": 123,
+          "transaction_type": "consume",
+          "amount": "-15.50",
+          "balance_after": "84.50",
+          "reference_type": "pipeline_run",
+          "reference_id": "run_uuid",
+          "created_at": "2024-01-01T00:00:00Z"
+        }
+      ],
+      "total": 150,
+      "limit": 20,
+      "offset": 0
+    }
+    ```
+
+    **Returns:**
+    - 200: Transaction list retrieved successfully
+    """
+    transaction_repo = SqlAlchemyCreditTransactionRepository(session)
+    use_case = ListTransactions(transaction_repo)
+    result = await use_case.execute(tenant_id, limit, offset)
+
     return result.value

@@ -32,10 +32,11 @@ def create_app(ApplicationConfig) -> FastAPI:
         allow_headers=["*"],
     )
 
-    from src.api.routes import health_check, billing
+    from src.api.routes import health_check, billing, invoices
 
     app.include_router(health_check.router, tags=["Health"])
     app.include_router(billing.router)
+    app.include_router(invoices.router)
 
     app.add_exception_handler(ClientError, handle_client_error)
     app.add_exception_handler(ServerError, handle_server_error)

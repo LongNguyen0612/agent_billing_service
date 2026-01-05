@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS credit_transactions (
     ledger_id BIGINT NOT NULL,
     transaction_type VARCHAR(20) NOT NULL,
     amount NUMERIC(18, 6) NOT NULL,
+    balance_before NUMERIC(18, 6) NOT NULL DEFAULT 0,
+    balance_after NUMERIC(18, 6) NOT NULL DEFAULT 0,
     reference_type VARCHAR(50),
     reference_id VARCHAR(255),
     idempotency_key VARCHAR(255) NOT NULL,

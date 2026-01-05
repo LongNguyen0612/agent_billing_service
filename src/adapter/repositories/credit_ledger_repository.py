@@ -9,11 +9,11 @@ from decimal import Decimal
 from datetime import datetime
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.app.repositories.credit_ledger_repository import CreditLedgerRepository
+from src.app.repositories.credit_ledger_repository import CreditLedgerRepository as ICreditLedgerRepository
 from src.domain.credit_ledger import CreditLedger
 
 
-class SqlAlchemyCreditLedgerRepository(CreditLedgerRepository):
+class SqlAlchemyCreditLedgerRepository(ICreditLedgerRepository):
     """
     SQLAlchemy implementation of CreditLedgerRepository
 
@@ -96,3 +96,21 @@ class SqlAlchemyCreditLedgerRepository(CreditLedgerRepository):
             ledger.updated_at = datetime.utcnow()
             self.session.add(ledger)
             await self.session.flush()
+
+
+    async def get_all(self) -> list[CreditLedger]:
+        """
+        Retrieve all ledgers
+
+        Used for reconciliation to iterate over all tenants.
+
+        Returns:
+            List of all CreditLedger entities
+        """
+        stmt = select(CreditLedger)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
+
+
+# Alias for backward compatibility with tests
+CreditLedgerRepository = SqlAlchemyCreditLedgerRepository

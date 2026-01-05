@@ -68,3 +68,15 @@ class CreditLedgerRepository(ABC):
             CreditLedger if found, None otherwise
         """
         pass
+
+    @abstractmethod
+    async def get_all(self) -> list[CreditLedger]:
+        """
+        Retrieve all ledgers
+
+        Used for reconciliation to iterate over all tenants.
+
+        Returns:
+            List of all CreditLedger entities
+        """
+        pass

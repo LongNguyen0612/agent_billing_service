@@ -42,7 +42,6 @@ class Subscription(BaseModel, table=True):
     )
 
     tenant_id: str = Field(
-        index=True,
         description="Tenant ID"
     )
 

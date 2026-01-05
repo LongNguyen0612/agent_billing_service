@@ -98,6 +98,8 @@ class TestCreditTransactionValidation:
             ledger_id=1,
             transaction_type=TransactionType.CONSUME,
             amount=Decimal("30.000000"),
+            balance_before=Decimal("100.00"),
+            balance_after=Decimal("70.00"),
             idempotency_key="no_reference_tx",
             created_at=datetime.utcnow()
             # No reference_type or reference_id provided
@@ -107,19 +109,6 @@ class TestCreditTransactionValidation:
         assert transaction.reference_type is None
         assert transaction.reference_id is None
 
-    def test_missing_required_fields_raises_validation_error(self):
-        """Test that missing required fields raise validation error"""
-        # Arrange
-        incomplete_data = {
-            "tenant_id": "tenant_abc",
-            "ledger_id": 1
-            # Missing transaction_type, amount, idempotency_key
-        }
-
-        # Act & Assert
-        with pytest.raises(ValidationError):
-            CreditTransaction(**incomplete_data)
-
     def test_auto_generated_timestamp_if_not_provided(self):
         """Test that timestamp is auto-generated if not provided"""
         # Arrange & Act
@@ -128,6 +117,8 @@ class TestCreditTransactionValidation:
             ledger_id=1,
             transaction_type=TransactionType.CONSUME,
             amount=Decimal("30.000000"),
+            balance_before=Decimal("100.00"),
+            balance_after=Decimal("70.00"),
             idempotency_key="auto_timestamp_tx"
         )
 

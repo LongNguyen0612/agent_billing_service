@@ -40,9 +40,7 @@ class CreditTransaction(BaseModel, table=True):
 
     __tablename__ = "credit_transactions"
     __table_args__ = (
-        Index('ix_credit_transactions_tenant_id', 'tenant_id'),
         Index('ix_credit_transactions_created_at', 'created_at'),
-        Index('ix_credit_transactions_idempotency_key', 'idempotency_key', unique=True),
         Index('ix_credit_transactions_reference', 'reference_type', 'reference_id'),
     )
 

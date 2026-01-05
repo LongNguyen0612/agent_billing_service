@@ -28,7 +28,6 @@ class CreditLedger(BaseModel, table=True):
     __table_args__ = (
         CheckConstraint('balance >= 0', name='balance_non_negative'),
         CheckConstraint('monthly_limit IS NULL OR monthly_limit >= 0', name='monthly_limit_non_negative'),
-        Index('ix_credit_ledgers_tenant_id', 'tenant_id', unique=True),
     )
 
     id: int = Field(
